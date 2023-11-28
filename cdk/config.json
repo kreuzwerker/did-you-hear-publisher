@@ -1,0 +1,28 @@
+{
+    "dev": {
+        "publishers": {
+            "dailyCronExpression": "0 9 ? * 2-6 *",
+            "dailySlackUrlSSMParam": "/Publisher/SlackDailyUrl",
+            "dailyMaxPerPublication": 5,
+            "summaryCronExpression": "30 9 ? * 6 *",
+            "summarySlackUrlSSMParam": "/Publisher/SlackSummaryUrl",
+            "logLevel": "INFO"
+        },
+        "webapp": {
+            "logLevel": "INFO"
+        }
+    },
+    "prod": {
+        "publishers": {
+            "dailyCronExpression": "0 9 ? * 2-6 *",
+            "dailySlackUrlSSMParam": "/Publisher/SlackDailyUrl",
+            "dailyMaxPerPublication": 5,
+            "summaryCronExpression": "30 9 ? * 6 *",
+            "summarySlackUrlSSMParam": "/Publisher/SlackSummaryUrl",
+            "logLevel": "INFO"
+        },
+        "webapp": {
+            "logLevel": "INFO"
+        }
+    }
+}

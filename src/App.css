@@ -1,0 +1,15 @@
+.App {
+  text-align: center;
+}
+
+.FormContainer {
+  margin-top: 50px;
+}
+
+.SubmitButton {
+  margin-top: 10px;
+}
+
+.FormContainer .alert {
+  margin-top: 15px;
+}
