@@ -22,6 +22,7 @@ export class DynamoDBRepository {
     }
 
     async saveInfoItem(item: InfoItem) {
+        this.logger.info("Should not be called")
         const payload = DBInfoItem.fromInfoItem(item);
 
         const params: DynamoDB.DocumentClient.PutItemInput = {
