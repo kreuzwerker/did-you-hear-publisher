@@ -1,6 +1,6 @@
-import { InfoItem } from "../../../lambda-src/InfoItem";
-import { InfoItemType } from "../../../lambda-src/InfoItemType";
-import { SlackDailyMessageBuilder } from "../../../lambda-src/publishers/daily-publisher/SlackDailyMessageBuilder";
+import { InfoItem } from "../../../../lambda-src/InfoItem";
+import { InfoItemType } from "../../../../lambda-src/InfoItemType";
+import { SlackDailyMessageBuilder } from "../../../../lambda-src/publishers/daily-publisher/SlackDailyMessageBuilder";
 
 describe('SlackDailyMessageBuilder', () => {
 

@@ -1,6 +1,7 @@
 import { InfoItemType, getTypeEmoji } from "../../InfoItemType";
 import { InfoItem } from "../../InfoItem";
 import { Logger } from "@aws-lambda-powertools/logger";
+import { StringFormatter } from "../../StringFormatter";
 
 export class SlackMessageBuilder {
 
@@ -24,7 +25,7 @@ export class SlackMessageBuilder {
     }
 
     private addTypesSectionBlocks(blocks: any[], itemsByType: Record<InfoItemType, InfoItem[]>) {
-        const allTypes: InfoItemType[] = Object.values(InfoItemType);
+        const allTypes: InfoItemType[] = Object.values(InfoItemType).sort();
 
         for (const infoItemType of allTypes) {
             const itemsOfType = itemsByType[infoItemType] || [];
@@ -64,7 +65,7 @@ export class SlackMessageBuilder {
             type: 'header',
             text: {
                 type: 'plain_text',
-                text: `${emoji} ${this.capitalizeFirstLetter(text)}`,
+                text: `${emoji} ${StringFormatter.capitalizeFirstLetter(text)}`,
                 emoji: true
             }
         };
@@ -77,7 +78,7 @@ export class SlackMessageBuilder {
     }
 
     private buildPublicationBlock(item: InfoItem) {
-            const normalizedTitle = this.capitalizeFirstLetter(item.title);
+            const normalizedTitle = StringFormatter.capitalizeFirstLetter(item.title);
             const content = `•  *${normalizedTitle}*: ${item.content}`;
 
             return {
@@ -87,10 +88,6 @@ export class SlackMessageBuilder {
                     'text': content
                 }
             }
-    }
-
-    private capitalizeFirstLetter(input: string): string {
-        return input.charAt(0).toUpperCase() + input.slice(1);
     }
 
     private getTypeSectionLabel(itemType: InfoItemType): string {
