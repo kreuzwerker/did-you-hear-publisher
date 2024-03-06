@@ -1,5 +1,5 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2, APIGatewayProxyStructuredResultV2 } from 'aws-lambda';
-import { lambdaHandler } from '../../../lambda-src/item-creator/handlerImpl'; // Assuming your lambda file is named 'yourLambdaFile'
+import { lambdaHandler } from '../../../lambda-src/item-creator/handlerImpl';
 
 const mockSaveInfoItem = jest.fn();
 
@@ -53,10 +53,10 @@ describe('lambdaHandler', () => {
           method: 'POST',
         },
       },
-      body: JSON.stringify({}), // valid JSON
+      body: JSON.stringify({}),
     } as any;
 
-    mockSaveInfoItem.mockRejectedValueOnce('Unable to save info item'); // Mocking the rejection of saveInfoItem
+    mockSaveInfoItem.mockRejectedValueOnce('Unable to save info item');
 
     const result = await lambdaHandler(event) as APIGatewayProxyStructuredResultV2;
 
