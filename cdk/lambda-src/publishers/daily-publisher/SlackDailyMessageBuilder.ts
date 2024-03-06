@@ -1,5 +1,6 @@
 import { InfoItemType } from "../../InfoItemType";
 import { InfoItem } from "../../InfoItem";
+import { StringFormatter } from "../../StringFormatter";
 
 export class SlackDailyMessageBuilder {
 
@@ -40,10 +41,10 @@ export class SlackDailyMessageBuilder {
     }
 
     private buildPublicationBlocks(infoItems: InfoItem[]) {
-        return infoItems.map(items => {
-            const typeIcon = this.getTypeIcon(items.itemType);
-            const normalizedTitle = this.capitalizeFirstLetter(items.title);
-            const content = `•  ${typeIcon} *${normalizedTitle}*: ${items.content}${SlackDailyMessageBuilder.blankLine}`;
+        return infoItems.map(item => {
+            const typeIcon = this.getTypeIcon(item.itemType);
+            const normalizedTitle = StringFormatter.capitalizeFirstLetter(item.title);
+            const content = `•  ${typeIcon} *${normalizedTitle}*: ${item.content}${SlackDailyMessageBuilder.blankLine}`;
 
             return {
                 type: 'section',
@@ -53,9 +54,5 @@ export class SlackDailyMessageBuilder {
                 }
             }
         });
-    }
-
-    private capitalizeFirstLetter(input: string): string {
-        return input.charAt(0).toUpperCase() + input.slice(1);
     }
 }

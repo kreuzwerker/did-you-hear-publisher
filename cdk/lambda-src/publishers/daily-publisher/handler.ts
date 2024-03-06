@@ -3,7 +3,7 @@ import axios from 'axios';
 import { getParameter } from '@aws-lambda-powertools/parameters/ssm';
 import middy from '@middy/core';
 import { InfoItem } from '../../InfoItem';
-import { SlackDailyMessageBuilder } from './SlackMessageBuilder';
+import { SlackDailyMessageBuilder } from "./SlackDailyMessageBuilder";
 import { DynamoDBRepository } from '../../dynamodb/DynamoDBRepository';
 
 /**

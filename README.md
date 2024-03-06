@@ -40,7 +40,6 @@ The second component is composed of a CloudFront distribution connected with a L
 
 The last component is made up of two lambdas, one for the daily publication and one for the regular/weekly publication (the regularity is configurable). Both Lambdas regularly check in the DynamoDB table what news need to be published and record the succesful publication to avoid duplications.
 
-
 ## Deployment
 
 Currently the deployment is done from local via the CLI, with the possibility to deploy either to a `Development` or `Production` environment. 
@@ -88,6 +87,16 @@ npm run deploy -- -c env=prod
 
 Once deployed, you can find the URL of the UI in the outputs of the CDK command. 
 
+## Development
+
+### Tests
+
+To run the tests, use:
+
+```bash
+npm run test
+```
+
 ## Warnings
 
 The Lambda URL deployed is **currently NOT PROTECTED**, so anyone that finds your Lambda URL can use it to push "content" via your Lambda. The next step in this project is to make the URL protected via CloudFront + IAM.
@@ -95,6 +104,6 @@ The Lambda URL deployed is **currently NOT PROTECTED**, so anyone that finds you
 ## Improvements planned
 
 - CI/CD pipelines
-- unit and integration tests
+- integration tests
 - e2e tests
 - more options for configuration
