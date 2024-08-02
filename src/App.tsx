@@ -1,13 +1,70 @@
-import React, { useState, ChangeEvent, FormEvent } from 'react';
+import React, { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import './App.css';
 import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap'; // Import Row and Col for layout
 import axios from 'axios';
+import {
+    CognitoUserPool,
+    CognitoUser,
+    AuthenticationDetails,
+    CognitoUserSession,
+} from 'amazon-cognito-identity-js';
+
+const userPool = new CognitoUserPool({
+    UserPoolId: 'YOUR_USER_POOL_ID',
+    ClientId: 'YOUR_USER_POOL_CLIENT_ID',
+});
+
+const cognitoDomain = process.env.COGNITO_UI;
+const redirectUri = process.env.WEBSITE_URL;
 
 function App() {
     const [titleValue, setTitleValue] = useState('');
     const [contentValue, setContentValue] = useState('');
     const [selectedContentType, setSelectedContentType] = useState('NEW');
     const [errorMessage, setErrorMessage] = useState('');
+    const [token, setToken] = useState('');
+
+    useEffect(() => {
+        const cognitoUser = userPool.getCurrentUser();
+    
+        if (cognitoUser) {
+            cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
+                if (err || !session || !session.isValid()) {
+                    signIn();
+                } else {
+                    setToken(session.getIdToken().getJwtToken());
+                }
+            });
+        } else {
+            redirectToCognitoLogin();
+        }
+    }, []);
+
+    const redirectToCognitoLogin = () => {
+        window.location.href = `https://${cognitoDomain}/login?client_id=${userPool.getClientId()}&response_type=token&scope=openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    };
+
+    // const signIn = () => {
+    //     const authenticationDetails = new AuthenticationDetails({
+    //         Username: 'USERNAME', // Replace with actual username
+    //         Password: 'PASSWORD', // Replace with actual password
+    //     });
+    
+    //     const cognitoUser = new CognitoUser({
+    //         Username: 'USERNAME',
+    //         Pool: userPool,
+    //     });
+    
+    //     cognitoUser.authenticateUser(authenticationDetails, {
+    //         onSuccess: (result) => {
+    //             setToken(result.getIdToken().getJwtToken());
+    //         },
+    //         onFailure: (err) => {
+    //             console.error(err);
+    //             setErrorMessage('Failed to authenticate');
+    //         },
+    //     });
+    // };
 
     const handleTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
         setTitleValue(event.target.value);
@@ -24,6 +81,12 @@ function App() {
 
     const handleSubmit = async (event: FormEvent) => {
         event.preventDefault();
+
+        if (!token) {
+            setErrorMessage('You must be logged in to submit an item.');
+            return;
+        }
+
         try {
             const requestBody = {
                 title: titleValue,
@@ -31,7 +94,12 @@ function App() {
                 itemType: selectedContentType,
             };
 
-            const response = await axios.post('/api/', requestBody);
+            const response = await axios.post('/api/', requestBody, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
 
             if (response.status === 200) {
                 setTitleValue('');

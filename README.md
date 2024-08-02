@@ -44,6 +44,8 @@ The last component is made up of two lambdas, one for the daily publication and 
 
 Currently the deployment is done from local via the CLI, with the possibility to deploy either to a `Development` or `Production` environment. 
 
+**AWS note**: If you use profiles to connect to AWS, you will need to execute `AWS_PROFILE={your profile name}` before continuing.
+
 ### Setup
 
 The following environment variables must exist:

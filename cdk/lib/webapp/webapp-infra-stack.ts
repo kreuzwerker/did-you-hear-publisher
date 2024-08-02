@@ -7,8 +7,11 @@ import { ItemCreatorStack } from './item-creator-stack';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { WebappConfig } from '../../config/WebappConfig';
+import { PublisherUserPool } from './publisher-cognito-user-pool';
+
 
 export interface WebappInfraStackProps extends cdk.StackProps {
+    account: string;
     config: WebappConfig;
 }
 
@@ -17,6 +20,8 @@ export interface WebappInfraStackProps extends cdk.StackProps {
  * Currently includes:
  * - a React UI hosted on S3
  * - a Lambda function creating items in DynamoDB via HTTP API calls
+ * - a CloudFront distribution redirecting to the website and the Lambda URL
+
  */
 export class WebappInfraStack extends cdk.Stack {
 
@@ -40,9 +45,8 @@ export class WebappInfraStack extends cdk.Stack {
         });
         const lambdaUrlDomain = getLambdaURL(itemCreator.lambdaUrl);
 
-
         // Create the Cloudfront distribution redirecting to the website and the Lambda URL
-        const cfDistribution = new cloudfront.CloudFrontWebDistribution(this, 'WebappCFDistribution', {
+        const webappCFDistribution = new cloudfront.CloudFrontWebDistribution(this, 'WebappCFDistribution', {
             originConfigs: [
                 {
                     s3OriginSource: {
@@ -67,9 +71,16 @@ export class WebappInfraStack extends cdk.Stack {
             ],
         });
 
+        const websiteURL = `https://${webappCFDistribution.distributionDomainName}`;
+        
+        const publisherUserPool = new PublisherUserPool(this, 'PublisherUserPoolStack', props.account, websiteURL);
+
+        new cdk.CfnOutput(this, 'PublisherCognitoUIUrl', {
+            value: `https://${publisherUserPool.hostedUIDomain}.auth.${this.region}.amazoncognito.com`,
+        });
 
         new cdk.CfnOutput(this, 'WebsiteURL', {
-            value: cfDistribution.distributionDomainName,
+            value: websiteURL,
         });
     }
 
