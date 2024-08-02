@@ -3,17 +3,21 @@ import './App.css';
 import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap'; // Import Row and Col for layout
 import axios from 'axios';
 import {
+    CognitoAccessToken,
+    CognitoIdToken,
+    CognitoRefreshToken,
+    CognitoUser,
     CognitoUserPool,
     CognitoUserSession,
 } from 'amazon-cognito-identity-js';
 
 const userPool = new CognitoUserPool({
-    UserPoolId: 'YOUR_USER_POOL_ID',
-    ClientId: 'YOUR_USER_POOL_CLIENT_ID',
+    UserPoolId: process.env.REACT_APP_COGNITO_USER_POOL_ID || "missing",
+    ClientId: process.env.REACT_APP_COGNITO_USER_POOL_CLIENT_ID || "missing",
 });
 
-const cognitoDomain = process.env.COGNITO_UI;
-const redirectUri = process.env.WEBSITE_URL;
+const cognitoUIUrl = process.env.REACT_APP_COGNITO_UI_URL || "missing";
+const redirectUri = process.env.REACT_APP_WEBSITE_URL || 'missing';
 
 function App() {
     const [titleValue, setTitleValue] = useState('');
@@ -30,16 +34,49 @@ function App() {
                 if (err || !session || !session.isValid()) {
                     redirectToCognitoLogin();
                 } else {
+                    console.error('session set')
                     setToken(session.getIdToken().getJwtToken());
                 }
             });
         } else {
-            redirectToCognitoLogin();
+            checkUrlForTokens();
         }
     }, []);
 
+    const checkUrlForTokens = () => {
+        // Parse the tokens from URL
+        const hash = window.location.hash;
+        const params = new URLSearchParams(hash.substring(1));
+    
+        const idToken = params.get('id_token');
+        const accessToken = params.get('access_token') || "missing";
+        const refreshToken = params.get('refresh_token') || "missing";
+    
+        if (idToken) {
+            // Store tokens (localStorage, cookie, etc.)
+            // Set session manually
+            const cognitoUser = new CognitoUser({
+                Username: 'dummy', // Since we are not using the username/password flow
+                Pool: userPool,
+            });
+            
+            // Example to set the session manually:
+            const session = new CognitoUserSession({
+                IdToken: new CognitoIdToken({ IdToken: idToken }),
+                AccessToken: new CognitoAccessToken({ AccessToken: accessToken }),
+                RefreshToken: new CognitoRefreshToken({ RefreshToken: refreshToken }),
+            });
+    
+            // Store the session if needed
+            cognitoUser.setSignInUserSession(session);
+            setToken(idToken);
+        } else {
+            redirectToCognitoLogin();
+        }
+    };
+
     const redirectToCognitoLogin = () => {
-        window.location.href = `https://${cognitoDomain}/login?client_id=${userPool.getClientId()}&response_type=token&scope=openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}`;
+        window.location.href = `${cognitoUIUrl}/login?client_id=${userPool.getClientId()}&response_type=token&scope=openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}`;
     };
 
     const handleTitleChange = (event: ChangeEvent<HTMLInputElement>) => {

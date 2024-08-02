@@ -75,10 +75,15 @@ export class WebappInfraStack extends cdk.Stack {
         
         const publisherUserPool = new PublisherUserPool(this, 'PublisherUserPoolStack', props.account, websiteURL);
 
+        new cdk.CfnOutput(this, 'PublisherCognitoUserPoolId', {
+            value: publisherUserPool.userPoolId,
+        });
+        new cdk.CfnOutput(this, 'PublisherCognitoUserPoolClientId', {
+            value: publisherUserPool.userPoolClientId,
+        });
         new cdk.CfnOutput(this, 'PublisherCognitoUIUrl', {
             value: `https://${publisherUserPool.hostedUIDomain}.auth.${this.region}.amazoncognito.com`,
         });
-
         new cdk.CfnOutput(this, 'WebsiteURL', {
             value: websiteURL,
         });
