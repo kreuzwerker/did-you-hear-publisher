@@ -4,8 +4,6 @@ import { Container, Form, Button, Alert, Row, Col } from 'react-bootstrap'; // I
 import axios from 'axios';
 import {
     CognitoUserPool,
-    CognitoUser,
-    AuthenticationDetails,
     CognitoUserSession,
 } from 'amazon-cognito-identity-js';
 
@@ -30,7 +28,7 @@ function App() {
         if (cognitoUser) {
             cognitoUser.getSession((err: Error | null, session: CognitoUserSession | null) => {
                 if (err || !session || !session.isValid()) {
-                    signIn();
+                    redirectToCognitoLogin();
                 } else {
                     setToken(session.getIdToken().getJwtToken());
                 }
@@ -43,28 +41,6 @@ function App() {
     const redirectToCognitoLogin = () => {
         window.location.href = `https://${cognitoDomain}/login?client_id=${userPool.getClientId()}&response_type=token&scope=openid+profile&redirect_uri=${encodeURIComponent(redirectUri)}`;
     };
-
-    // const signIn = () => {
-    //     const authenticationDetails = new AuthenticationDetails({
-    //         Username: 'USERNAME', // Replace with actual username
-    //         Password: 'PASSWORD', // Replace with actual password
-    //     });
-    
-    //     const cognitoUser = new CognitoUser({
-    //         Username: 'USERNAME',
-    //         Pool: userPool,
-    //     });
-    
-    //     cognitoUser.authenticateUser(authenticationDetails, {
-    //         onSuccess: (result) => {
-    //             setToken(result.getIdToken().getJwtToken());
-    //         },
-    //         onFailure: (err) => {
-    //             console.error(err);
-    //             setErrorMessage('Failed to authenticate');
-    //         },
-    //     });
-    // };
 
     const handleTitleChange = (event: ChangeEvent<HTMLInputElement>) => {
         setTitleValue(event.target.value);
