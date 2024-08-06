@@ -4,10 +4,13 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import { WebsiteBucket } from './website-bucket';
 import { ItemCreatorStack } from './item-creator-stack';
+import { WebappInfraEdgeStack } from './webapp-infra-edge-stack';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { WebappConfig } from '../../config/WebappConfig';
 import { PublisherUserPool } from './publisher-cognito-user-pool';
+import path = require('path');
+import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
 
 
 export interface WebappInfraStackProps extends cdk.StackProps {
@@ -41,9 +44,48 @@ export class WebappInfraStack extends cdk.Stack {
         // Create the Lambda handling new publications
         const itemCreator = new ItemCreatorStack(this, 'ItemCreatorStack', {
             config: props.config,
-            infoItemsTable: this.infoItemsTable
+            infoItemsTable: this.infoItemsTable,
         });
         const lambdaUrlDomain = getLambdaURL(itemCreator.lambdaUrl);
+
+        // const lambdaEdgeStack = new WebappInfraEdgeStack(this, 'AuthLambdaEdgeStack', { 
+        //     config: props.config,
+        //     env: { 
+        //         region: 'us-east-1',
+        //         account: props.account, 
+        //     } 
+        // });
+
+        // const authFunction = new cloudfront.experimental.EdgeFunction(this, 'AuthLambdaEdge', {
+        //     handler: 'authEdge.handler',
+        //     runtime: lambda.Runtime.NODEJS_16_X,  
+        //     code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda-src/auth-edge'), {
+        //         bundling: {
+        //           command: [
+        //             "bash",
+        //             "-c",
+        //             "npm install && cp -rT /asset-input/ /asset-output/",
+        //           ],
+        //           image: lambda.Runtime.NODEJS_16_X.bundlingImage,
+        //           user: "root",
+        //         },
+        //       }),
+        //  });
+
+        // authFunction.addToRolePolicy(new PolicyStatement({
+        //     sid: 'AllowInvokeFunctionUrl',
+        //     effect: Effect.ALLOW,
+        //     actions: ['lambda:InvokeFunctionUrl'],
+        //     resources: [itemCreator.lambda.functionArn],
+        //     conditions: {
+        //         "StringEquals": {"lambda:FunctionUrlAuthType": "AWS_IAM"}
+        //     }
+        // }));
+
+        // // Create a version and alias for the Lambda function
+        // const lambdaVersion = new lambda.Version(this, 'LambdaVersion', {
+        //     lambda: lambdaEdgeStack.lambdaFunction,
+        // });
 
         // Create the Cloudfront distribution redirecting to the website and the Lambda URL
         const webappCFDistribution = new cloudfront.CloudFrontWebDistribution(this, 'WebappCFDistribution', {
@@ -65,7 +107,11 @@ export class WebappInfraStack extends cdk.Stack {
                     behaviors: [{
                         isDefaultBehavior: false,
                         pathPattern: '/api/*',
-                        allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL
+                        allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+                        // lambdaFunctionAssociations: [{
+                        //     eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                        //     lambdaFunction: authFunction.currentVersion,
+                        // }],
                     }],
                 },
             ],
