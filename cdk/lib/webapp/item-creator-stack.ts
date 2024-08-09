@@ -34,7 +34,7 @@ export class ItemCreatorStack extends Construct {
 
         this.lambda = itemCreatorLambda;
         this.lambdaUrl = itemCreatorLambda.addFunctionUrl({
-            authType: lambda.FunctionUrlAuthType.NONE,
+            authType: lambda.FunctionUrlAuthType.AWS_IAM,
         });
     }
 }

@@ -56,31 +56,34 @@ export class WebappInfraStack extends cdk.Stack {
         //     } 
         // });
 
-        // const authFunction = new cloudfront.experimental.EdgeFunction(this, 'AuthLambdaEdge', {
-        //     handler: 'authEdge.handler',
-        //     runtime: lambda.Runtime.NODEJS_16_X,  
-        //     code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda-src/auth-edge'), {
-        //         bundling: {
-        //           command: [
-        //             "bash",
-        //             "-c",
-        //             "npm install && cp -rT /asset-input/ /asset-output/",
-        //           ],
-        //           image: lambda.Runtime.NODEJS_16_X.bundlingImage,
-        //           user: "root",
-        //         },
-        //       }),
-        //  });
+        const authFunction = new cloudfront.experimental.EdgeFunction(this, 'CognitoAuthLambdaEdge', {
+            handler: 'authEdge.handler',
+            runtime: lambda.Runtime.NODEJS_16_X, 
+            code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda-src/auth-edge'), {
+                bundling: {
+                  command: [
+                    "bash",
+                    "-c",
+                    "npm install && cp -rT /asset-input/ /asset-output/",
+                  ],
+                  image: lambda.Runtime.NODEJS_16_X.bundlingImage,
+                  user: "root",
+                },
+              }),
+            currentVersionOptions: {
+                removalPolicy: cdk.RemovalPolicy.DESTROY
+            },
+         });
 
-        // authFunction.addToRolePolicy(new PolicyStatement({
-        //     sid: 'AllowInvokeFunctionUrl',
-        //     effect: Effect.ALLOW,
-        //     actions: ['lambda:InvokeFunctionUrl'],
-        //     resources: [itemCreator.lambda.functionArn],
-        //     conditions: {
-        //         "StringEquals": {"lambda:FunctionUrlAuthType": "AWS_IAM"}
-        //     }
-        // }));
+        authFunction.addToRolePolicy(new PolicyStatement({
+            sid: 'AllowInvokeFunctionUrl',
+            effect: Effect.ALLOW,
+            actions: ['lambda:InvokeFunctionUrl'],
+            resources: [itemCreator.lambda.functionArn],
+            conditions: {
+                "StringEquals": {"lambda:FunctionUrlAuthType": "AWS_IAM"}
+            }
+        }));
 
         // // Create a version and alias for the Lambda function
         // const lambdaVersion = new lambda.Version(this, 'LambdaVersion', {
@@ -108,10 +111,11 @@ export class WebappInfraStack extends cdk.Stack {
                         isDefaultBehavior: false,
                         pathPattern: '/api/*',
                         allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
-                        // lambdaFunctionAssociations: [{
-                        //     eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
-                        //     lambdaFunction: authFunction.currentVersion,
-                        // }],
+                        lambdaFunctionAssociations: [{
+                            eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                            lambdaFunction: authFunction.currentVersion,
+                            includeBody: true
+                        }],
                     }],
                 },
             ],
