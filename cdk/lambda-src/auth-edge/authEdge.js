@@ -72,22 +72,20 @@ module.exports.handler = async (event) => {
             'Content-Type': headers['content-type'][0].value,
             host: apiUrl.hostname, // compulsory
         },
+        
     };
     
     try {
     
-        // This was added to add a body and fix the signature not matching but now the request hangs until timeout
-        //
-        // if (cfRequest.body && cfRequest.body.data) {
-        //     let body = cfRequest.body.data;
-        //     if (cfRequest.body.encoding === 'base64') {
-        //         body = Buffer.from(body, 'base64').toString('utf-8');
-        //     }
-        //     signV4Options.body = body;
-
-        //     signV4Options.headers['Content-Length'] = Buffer.byteLength(body).toString();
-        //     // signV4Options.headers['Content-Length'] = "50";
-        // }
+        if (cfRequest.body && cfRequest.body.data) {
+            let body = cfRequest.body.data;
+            if (cfRequest.body.encoding === 'base64') {
+                body = Buffer.from(body, 'base64').toString('utf-8');
+            }
+    
+            signV4Options.body = typeof body === 'string' ? body : JSON.stringify(body);
+            signV4Options.headers['Content-Length'] = Buffer.byteLength(signV4Options.body).toString();
+        }
 
         console.log('Signing request with options: ', signV4Options);
         
@@ -96,14 +94,14 @@ module.exports.handler = async (event) => {
             ...signed,
             url: apiUrl.href, // compulsory,
             timeout: 5000,
+            data: signV4Options.body,
         });
 
-        console.log('Result of axios call: ', result);
         console.log('Successfully received data: ', result.data);
         return {
             status: '200',
             statusDescription: 'OK',
-            body: JSON.stringify(data),
+            body: JSON.stringify(result.data),
         };
     } catch (error) {
         console.error('An error occurred', error);
