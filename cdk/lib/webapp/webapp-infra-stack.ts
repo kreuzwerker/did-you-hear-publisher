@@ -73,6 +73,7 @@ export class WebappInfraStack extends cdk.Stack {
             currentVersionOptions: {
                 removalPolicy: cdk.RemovalPolicy.DESTROY
             },
+            timeout: cdk.Duration.seconds(7),
          });
 
         authFunction.addToRolePolicy(new PolicyStatement({
