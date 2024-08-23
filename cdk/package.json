@@ -27,7 +27,7 @@
     "@aws-cdk/aws-s3-deployment": "^1.204.0",
     "@aws-lambda-powertools/logger": "^1.12.1",
     "@aws-lambda-powertools/parameters": "^1.12.1",
-    "@aws-sdk/client-ssm": "^3.405.0",
+    "@aws-sdk/client-ssm": "^3.637.0",
     "@middy/core": "^4.6.1",
     "@types/uuid": "^9.0.3",
     "aws-cdk-lib": "2.94.0",

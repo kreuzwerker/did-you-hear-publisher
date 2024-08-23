@@ -7,8 +7,14 @@ import { ItemCreatorStack } from './item-creator-stack';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { WebappConfig } from '../../config/WebappConfig';
+import { PublisherUserPool } from './publisher-cognito-user-pool';
+import path = require('path');
+import { Effect, PolicyStatement } from 'aws-cdk-lib/aws-iam';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+
 
 export interface WebappInfraStackProps extends cdk.StackProps {
+    account: string;
     config: WebappConfig;
 }
 
@@ -17,6 +23,8 @@ export interface WebappInfraStackProps extends cdk.StackProps {
  * Currently includes:
  * - a React UI hosted on S3
  * - a Lambda function creating items in DynamoDB via HTTP API calls
+ * - a Lambda@Edge function for authentication against Cognito
+ * - a CloudFront distribution redirecting to the website and the Lambda URL
  */
 export class WebappInfraStack extends cdk.Stack {
 
@@ -27,22 +35,71 @@ export class WebappInfraStack extends cdk.Stack {
     constructor(scope: Construct, id: string, props: WebappInfraStackProps) {
         super(scope, id, props);
 
-        // Create the S3 bucket for hosting the website 
+        // S3 bucket hosting the website 
         const webappBucket = new WebsiteBucket(this, 'WebappBucket');
         this.s3Bucket = webappBucket.s3Bucket;
         this.infoItemsTable = this.createItemsTable();
-
         
-        // Create the Lambda handling new publications
+        // Lambda handling new publications
         const itemCreator = new ItemCreatorStack(this, 'ItemCreatorStack', {
             config: props.config,
-            infoItemsTable: this.infoItemsTable
+            infoItemsTable: this.infoItemsTable,
         });
         const lambdaUrlDomain = getLambdaURL(itemCreator.lambdaUrl);
+        
+
+        // Lambda@Edge function for authentication against Cognito
+        const authFunction = this.createAuthEdgeFunction(itemCreator);
+
+        // Cloudfront distribution redirecting to the website and the Lambda URL
+        const webappCFDistribution = this.createCloudFrontDistribution(webappBucket, lambdaUrlDomain, authFunction);
+        const websiteURL = `https://${webappCFDistribution.distributionDomainName}`;
+
+        // Authentication user pool
+        const publisherUserPool = new PublisherUserPool(this, 'PublisherUserPoolStack', props.account, websiteURL);
 
 
-        // Create the Cloudfront distribution redirecting to the website and the Lambda URL
-        const cfDistribution = new cloudfront.CloudFrontWebDistribution(this, 'WebappCFDistribution', {
+        // Store User Pool Client ID in SSM Parameter Store and allow the edge function access
+        const { publisherUserPoolIdParam, publisherUserPoolClientIdParam } = this.createUserPoolsParameters(publisherUserPool);
+        authFunction.addToRolePolicy(new PolicyStatement({
+            effect: Effect.ALLOW,
+            actions: ['ssm:GetParameter'],
+            resources: [
+                publisherUserPoolIdParam.parameterArn,
+                publisherUserPoolClientIdParam.parameterArn,
+            ],
+        }));
+        
+        // Outputs
+
+        new cdk.CfnOutput(this, 'PublisherCognitoUserPoolId', {
+            value: publisherUserPool.userPoolId,
+        });
+        new cdk.CfnOutput(this, 'PublisherCognitoUserPoolClientId', {
+            value: publisherUserPool.userPoolClientId,
+        });
+        new cdk.CfnOutput(this, 'PublisherCognitoUIUrl', {
+            value: `https://${publisherUserPool.hostedUIDomain}.auth.${this.region}.amazoncognito.com`,
+        });
+        new cdk.CfnOutput(this, 'WebsiteURL', {
+            value: websiteURL,
+        });
+    }
+
+    private createUserPoolsParameters(publisherUserPool: PublisherUserPool) {
+        const publisherUserPoolIdParam = new ssm.StringParameter(this, 'PublisherUserPoolIdParam', {
+            parameterName: '/publisher/user-pool-id',
+            stringValue: publisherUserPool.userPoolId,
+        });
+        const publisherUserPoolClientIdParam = new ssm.StringParameter(this, 'PublisherUserPoolClientIdParam', {
+            parameterName: '/publisher/user-pool-client-id',
+            stringValue: publisherUserPool.userPoolClientId,
+        });
+        return { publisherUserPoolIdParam, publisherUserPoolClientIdParam };
+    }
+
+    private createCloudFrontDistribution(webappBucket: WebsiteBucket, lambdaUrlDomain: string, authFunction: cdk.aws_cloudfront.experimental.EdgeFunction) {
+        return new cloudfront.CloudFrontWebDistribution(this, 'WebappCFDistribution', {
             originConfigs: [
                 {
                     s3OriginSource: {
@@ -61,16 +118,49 @@ export class WebappInfraStack extends cdk.Stack {
                     behaviors: [{
                         isDefaultBehavior: false,
                         pathPattern: '/api/*',
-                        allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL
+                        allowedMethods: cloudfront.CloudFrontAllowedMethods.ALL,
+                        lambdaFunctionAssociations: [{
+                            eventType: cloudfront.LambdaEdgeEventType.ORIGIN_REQUEST,
+                            lambdaFunction: authFunction.currentVersion,
+                            includeBody: true
+                        }],
                     }],
                 },
             ],
         });
+    }
 
-
-        new cdk.CfnOutput(this, 'WebsiteURL', {
-            value: cfDistribution.distributionDomainName,
+    private createAuthEdgeFunction(itemCreator: ItemCreatorStack) {
+        const authFunction = new cloudfront.experimental.EdgeFunction(this, 'CognitoAuthLambdaEdge', {
+            handler: 'authEdge.handler',
+            runtime: lambda.Runtime.NODEJS_16_X,
+            code: lambda.Code.fromAsset(path.join(__dirname, '../../lambda-src-edge/auth-edge'), {
+                bundling: {
+                    command: [
+                        "bash",
+                        "-c",
+                        "npm install && cp -rT /asset-input/ /asset-output/",
+                    ],
+                    image: lambda.Runtime.NODEJS_16_X.bundlingImage,
+                    user: "root",
+                },
+            }),
+            currentVersionOptions: {
+                removalPolicy: cdk.RemovalPolicy.DESTROY
+            },
+            timeout: cdk.Duration.seconds(7),
         });
+
+        authFunction.addToRolePolicy(new PolicyStatement({
+            sid: 'AllowInvokeFunctionUrl',
+            effect: Effect.ALLOW,
+            actions: ['lambda:InvokeFunctionUrl'],
+            resources: [itemCreator.lambda.functionArn],
+            conditions: {
+                "StringEquals": { "lambda:FunctionUrlAuthType": "AWS_IAM" }
+            }
+        }));
+        return authFunction;
     }
 
     private createItemsTable(): dynamodb.Table {

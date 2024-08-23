@@ -34,7 +34,7 @@ The first component is a simple React-based UI, in which you can enter the conte
 
 #### UI Backend
 
-The second component is composed of a CloudFront distribution connected with a Lambda via Lambda URL, which saves the content to a DynamoDB table.
+The second component is composed of a CloudFront distribution connected with a Lambda via Lambda URL, which saves the content to a DynamoDB table. The URL is protected via IAM authentication, enforced in the CloudFront distribution via Lambda@Edge.
 
 #### Publishers
 
@@ -43,6 +43,8 @@ The last component is made up of two lambdas, one for the daily publication and 
 ## Deployment
 
 Currently the deployment is done from local via the CLI, with the possibility to deploy either to a `Development` or `Production` environment. 
+
+**AWS note**: If you use profiles to connect to AWS, you will need to execute `AWS_PROFILE={your profile name}` before continuing.
 
 ### Setup
 
@@ -67,18 +69,25 @@ aws ssm put-parameter --name /Publisher/SlackSummaryUrl --value $SLACK_SUMMARY_U
 
 ### Deploy via CDK
 
+Install all dependencies (this also installs dependencies of all sub-folders):
+
+```bash
+npm i
+```
+
 In a new account, you will first need to bootstrap CDK:
 
 ```bash
 cd cdk
-npm i
-npx cdk bootstrap
+
+npx cdk bootstrap -c env=dev
+or
+npx cdk bootstrap -c env=prod
 ```
 
 Then run the cdk deployment, from the **root** of the project:
 
 ```bash
-npm i
 
 npm run deploy -- -c env=dev
 # or
@@ -86,6 +95,10 @@ npm run deploy -- -c env=prod
 ```
 
 Once deployed, you can find the URL of the UI in the outputs of the CDK command. 
+
+### Security
+
+The last step is to create a user in the Cognito pool. You can do that in the AWS console.
 
 ## Development
 
@@ -96,10 +109,6 @@ To run the tests, use:
 ```bash
 npm run test
 ```
-
-## Warnings
-
-The Lambda URL deployed is **currently NOT PROTECTED**, so anyone that finds your Lambda URL can use it to push "content" via your Lambda. The next step in this project is to make the URL protected via CloudFront + IAM.
 
 ## Improvements planned
 

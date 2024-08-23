@@ -15,11 +15,13 @@ interface ItemCreatorStackProps {
 export class ItemCreatorStack extends Construct {
 
     public readonly lambdaUrl: lambda.FunctionUrl;
+    public readonly lambda: lambdaNode.NodejsFunction;
 
     constructor(scope: Construct, id: string, props: ItemCreatorStackProps) {
         super(scope, id);
 
         const itemCreatorLambda = new lambdaNode.NodejsFunction(this, 'itemCreatorLambda', {
+            functionName: 'itemCreatorLambda',
             entry: 'lambda-src/item-creator/handler.ts',
             handler: 'handler',
             runtime: lambda.Runtime.NODEJS_16_X,
@@ -30,8 +32,9 @@ export class ItemCreatorStack extends Construct {
         });
         props.infoItemsTable.grantWriteData(itemCreatorLambda);
 
+        this.lambda = itemCreatorLambda;
         this.lambdaUrl = itemCreatorLambda.addFunctionUrl({
-            authType: lambda.FunctionUrlAuthType.NONE,
+            authType: lambda.FunctionUrlAuthType.AWS_IAM,
         });
     }
 }

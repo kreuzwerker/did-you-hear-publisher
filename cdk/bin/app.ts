@@ -26,8 +26,9 @@ const appEnv = getApplicationEnvironment(environment);
 // App setup
 
 const webappInfraStack = new WebappInfraStack(app, 'WebappInfraStack', {
+   account: appEnv.account,
    config: webappConfig,
-   env: appEnv,
+   env: appEnv, // DO NOT REMOVE (necessary to make sure no cross-env situation happens)
 });
 
 new WebappDeploymentStack(app, 'WebappStack', {

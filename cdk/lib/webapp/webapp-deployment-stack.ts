@@ -22,7 +22,8 @@ export class WebappDeploymentStack extends cdk.Stack {
         new s3Deploy.BucketDeployment(this, "DeployWebsiteFiles", {
             sources: [s3Deploy.Source.asset("../build")],
             destinationBucket: props.s3Bucket,
-            distribution: props.cfDistribution // Indicates that this CF distribution should be invalided after deployment (to avoid caching issues)
+            distribution: props.cfDistribution, // Indicates that this CF distribution should be invalided after deployment (to avoid caching issues)
+            
         });
     };
 }
