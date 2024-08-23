@@ -27,7 +27,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "deploy": "bash deploy.sh",
-    "postinstall": "cd cdk && npm i && cd lambda-src-edge && npm i"
+    "postinstall": "cd cdk && npm install && cd lambda-src-edge/auth-edge && npm i"
   },
   "eslintConfig": {
     "extends": [

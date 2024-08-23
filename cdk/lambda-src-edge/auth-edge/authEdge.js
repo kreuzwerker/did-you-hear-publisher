@@ -48,8 +48,8 @@ module.exports.handler = async (event) => {
 
     // Verify the token with Cognito
     try {
-        const COGNITO_USER_POOL_ID = await getParameter('/my-app/user-pool-id');
-        const COGNITO_CLIENT_ID = await getParameter('/my-app/user-pool-client-id');
+        const COGNITO_USER_POOL_ID = await getParameter('/publisher/user-pool-id');
+        const COGNITO_CLIENT_ID = await getParameter('/publisher/user-pool-client-id');
 
         const verifier = CognitoJwtVerifier.create({
             userPoolId: COGNITO_USER_POOL_ID,
