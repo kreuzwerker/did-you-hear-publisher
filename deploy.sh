@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eo pipefail
 
+npm ci
+
 cd cdk
 npx cdk deploy WebappInfraStack --require-approval never "$@"
 

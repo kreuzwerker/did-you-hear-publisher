@@ -69,11 +69,16 @@ aws ssm put-parameter --name /Publisher/SlackSummaryUrl --value $SLACK_SUMMARY_U
 
 ### Deploy via CDK
 
+Install all dependencies (this also installs dependencies of all sub-folders):
+
+```bash
+npm i
+```
+
 In a new account, you will first need to bootstrap CDK:
 
 ```bash
 cd cdk
-npm i
 
 npx cdk bootstrap -c env=dev
 or
@@ -83,7 +88,6 @@ npx cdk bootstrap -c env=prod
 Then run the cdk deployment, from the **root** of the project:
 
 ```bash
-npm i
 
 npm run deploy -- -c env=dev
 # or

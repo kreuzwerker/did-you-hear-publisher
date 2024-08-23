@@ -2,6 +2,7 @@ const axios = require('axios');
 const { SignatureV4 } = require('@aws-sdk/signature-v4');
 const { Sha256 } = require('@aws-crypto/sha256-js');
 const { CognitoJwtVerifier } = require('aws-jwt-verify');
+const { SSMClient, GetParameterCommand } = require('@aws-sdk/client-ssm');
 
 const {
     AWS_ACCESS_KEY_ID,
@@ -9,29 +10,32 @@ const {
     AWS_SESSION_TOKEN,
 } = process.env;
 
-const COGNITO_USER_POOL_ID = "eu-central-1_DMCvrI0JY";
-const COGNITO_CLIENT_ID = "2kpv50fubmasfahl5m6hv3lchd";
+const ssmClient = new SSMClient();
+
+const getParameter = async (name) => {
+    const command = new GetParameterCommand({ Name: name });
+    const response = await ssmClient.send(command);
+    return response.Parameter.Value;
+};
 
 const sigv4 = new SignatureV4({
     service: 'lambda',
     region: 'eu-central-1',
     credentials: {
-      accessKeyId: AWS_ACCESS_KEY_ID,
-      secretAccessKey: AWS_SECRET_ACCESS_KEY,
-      sessionToken: AWS_SESSION_TOKEN,
+        accessKeyId: AWS_ACCESS_KEY_ID,
+        secretAccessKey: AWS_SECRET_ACCESS_KEY,
+        sessionToken: AWS_SESSION_TOKEN,
     },
     sha256: Sha256,
-  });
+});
 
 module.exports.handler = async (event) => {
-    console.log('Event: ' + JSON.stringify(event));
     const cfRequest = event.Records[0].cf.request;
 
     let headers = cfRequest.headers;
 
     // Check for the authorization header
     const authHeader = headers['authorization'];
-    console.log('Headers: ' + authHeader);
     if (!authHeader || !authHeader[0] || !authHeader[0].value.startsWith('Bearer ')) {
         return {
             status: '403',
@@ -44,6 +48,9 @@ module.exports.handler = async (event) => {
 
     // Verify the token with Cognito
     try {
+        const COGNITO_USER_POOL_ID = await getParameter('/my-app/user-pool-id');
+        const COGNITO_CLIENT_ID = await getParameter('/my-app/user-pool-client-id');
+
         const verifier = CognitoJwtVerifier.create({
             userPoolId: COGNITO_USER_POOL_ID,
             tokenUse: "id",
@@ -72,37 +79,10 @@ module.exports.handler = async (event) => {
             'Content-Type': headers['content-type'][0].value,
             host: apiUrl.hostname, // compulsory
         },
-        
     };
-    
+
     try {
-    
-        if (cfRequest.body && cfRequest.body.data) {
-            let body = cfRequest.body.data;
-            if (cfRequest.body.encoding === 'base64') {
-                body = Buffer.from(body, 'base64').toString('utf-8');
-            }
-    
-            signV4Options.body = typeof body === 'string' ? body : JSON.stringify(body);
-            signV4Options.headers['Content-Length'] = Buffer.byteLength(signV4Options.body).toString();
-        }
-
-        console.log('Signing request with options: ', signV4Options);
-        
-        const signed = await sigv4.sign(signV4Options);
-        const result = await axios({
-            ...signed,
-            url: apiUrl.href, // compulsory,
-            timeout: 5000,
-            data: signV4Options.body,
-        });
-
-        console.log('Successfully received data: ', result.data);
-        return {
-            status: '200',
-            statusDescription: 'OK',
-            body: JSON.stringify(result.data),
-        };
+        return await signAndForwardRequest(cfRequest, signV4Options, apiUrl);
     } catch (error) {
         console.error('An error occurred', error);
         return {
@@ -112,3 +92,30 @@ module.exports.handler = async (event) => {
         };
     }
 };
+
+async function signAndForwardRequest(cfRequest, signV4Options, apiUrl) {
+    if (cfRequest.body && cfRequest.body.data) {
+        let body = cfRequest.body.data;
+        if (cfRequest.body.encoding === 'base64') {
+            body = Buffer.from(body, 'base64').toString('utf-8');
+        }
+
+        signV4Options.body = typeof body === 'string' ? body : JSON.stringify(body);
+        signV4Options.headers['Content-Length'] = Buffer.byteLength(signV4Options.body).toString();
+    }
+
+    const signed = await sigv4.sign(signV4Options);
+    const result = await axios({
+        ...signed,
+        url: apiUrl.href, // compulsory,
+        timeout: 5000,
+        data: signV4Options.body,
+    });
+
+    return {
+        status: '200',
+        statusDescription: 'OK',
+        body: JSON.stringify(result.data),
+    };
+}
+
