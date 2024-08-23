@@ -34,7 +34,7 @@ The first component is a simple React-based UI, in which you can enter the conte
 
 #### UI Backend
 
-The second component is composed of a CloudFront distribution connected with a Lambda via Lambda URL, which saves the content to a DynamoDB table.
+The second component is composed of a CloudFront distribution connected with a Lambda via Lambda URL, which saves the content to a DynamoDB table. The URL is protected via IAM authentication, enforced in the CloudFront distribution via Lambda@Edge.
 
 #### Publishers
 
@@ -96,6 +96,10 @@ npm run deploy -- -c env=prod
 
 Once deployed, you can find the URL of the UI in the outputs of the CDK command. 
 
+### Security
+
+The last step is to create a user in the Cognito pool. You can do that in the AWS console.
+
 ## Development
 
 ### Tests
@@ -105,10 +109,6 @@ To run the tests, use:
 ```bash
 npm run test
 ```
-
-## Warnings
-
-The Lambda URL deployed is **currently NOT PROTECTED**, so anyone that finds your Lambda URL can use it to push "content" via your Lambda. The next step in this project is to make the URL protected via CloudFront + IAM.
 
 ## Improvements planned
 
